@@ -11,6 +11,7 @@ WORKERS = int(os.environ.get("WORKERS", "200"))
 PLUGINS = dict(os.environ.get("PLUGINS", {"root": "bot/plugins"}))
 SLEEP_THRESHOLD = int(os.environ.get("SLEEP_THRESHOLD", "10"))
 DB_URI = os.environ.get("DB_URI", "")
+DB_NAME = os.environ.get("DB_NAME", "Cluster0")
 SESSION_STRING = os.environ.get("SESSION_STRING", "")
 VERIFY = {}
 
