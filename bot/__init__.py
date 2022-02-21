@@ -1,26 +1,16 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# (c) @AlbertEinsteinTG
-
 import os
-import logging
 import time
-
+import logging
 from logging.handlers import RotatingFileHandler
 
-from .translation import Translation
-
-# Change Accordingly While Deploying To A VPS
-APP_ID = int(os.environ.get("APP_ID"))
-
-API_HASH = os.environ.get("API_HASH")
-
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
-
-DB_URI = os.environ.get("DB_URI")
-
-USER_SESSION = os.environ.get("USER_SESSION")
-
+API_ID = int(os.environ.get("API_ID", 0))
+API_HASH = os.environ.get("API_HASH", "")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
+DB_URI = os.environ.get("DB_URI", "")
+SESSION_STRING = os.environ.get("SESSION_STRING", "")
+OWNER_ID = int(os.environ.get("OWNER_ID", "1790509785"))
+SESSION = os.environ.get("SESSION", "ADV-Auto-Filter-Bot-V2")
+SLEEP_THRESHOLD = int(os.environ.get("SLEEP_THRESHOLD"))
 VERIFY = {}
 
 logging.basicConfig(
@@ -36,10 +26,10 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
+
 logging.getLogger("pyrogram").setLevel(logging.WARNING)
 
 start_uptime = time.time()
-
 
 def LOGGER(name: str) -> logging.Logger:
     return logging.getLogger(name)

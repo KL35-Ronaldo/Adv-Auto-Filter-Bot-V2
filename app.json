@@ -3,11 +3,11 @@
     "description": "A Filter Bot Which Doesnt Need Manuall Filter Adding",
     "logo": "https://telegra.ph/file/3ed71fa60172e09e96794.jpg",
     "env": {
-        "APP_ID": {"description": "From : https://my.telegram.org/"},
+        "API_ID": {"description": "From : https://my.telegram.org/"},
         "API_HASH": {"description": "From : https://my.telegram.org/"},
         "BOT_TOKEN": {"description": "From : https://t.me/BotFather/"},
         "DB_URI": {"description": "From : https://cloud.mongodb.com/"},
-        "USER_SESSION": {"description": "From : https://t.me/PyrogramStringBot"}
+        "SESSION_STRING": {"description": "From : https://t.me/PyrogramStringBot"}
     },
     "buildpacks": [{"url": "heroku/python"}],
     "formation": {"worker": {"quantity": 1, "size": "free"}}

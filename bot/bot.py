@@ -1,11 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# (c) @SpEcHIDe
-
 from pyrogram import Client, __version__
-
-from . import API_HASH, APP_ID, LOGGER, BOT_TOKEN 
-
+from . import API_HASH, API_ID, LOGGER, BOT_TOKEN, SESSION, 
 from .user import User
 
 class Bot(Client):
@@ -14,15 +8,7 @@ class Bot(Client):
 
     def __init__(self):
         super().__init__(
-            "bot",
-            api_hash=API_HASH,
-            api_id=APP_ID,
-            plugins={
-                "root": "bot/plugins"
-            },
-            workers=200,
-            bot_token=BOT_TOKEN,
-            sleep_threshold=10
+            SESSION
         )
         self.LOGGER = LOGGER
 
@@ -38,3 +24,13 @@ class Bot(Client):
     async def stop(self, *args):
         await super().stop()
         self.LOGGER(__name__).info("Bot stopped. Bye.")
+
+"bot",
+api_hash=API_HASH,
+api_id=APP_ID,
+plugins={"root": "bot/plugins"},
+workers=200,
+bot_token=BOT_TOKEN,
+sleep_threshold=10
+
+Client()
