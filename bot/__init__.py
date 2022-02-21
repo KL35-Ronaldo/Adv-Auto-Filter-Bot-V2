@@ -3,14 +3,15 @@ import time
 import logging
 from logging.handlers import RotatingFileHandler
 
-API_ID = int(os.environ.get("API_ID", 0))
+SESSION_NAME = os.environ.get("SESSION_NAME", "ADV-Auto-Filter-Bot-V2")
+API_ID = int(os.environ.get("API_ID", "0"))
 API_HASH = os.environ.get("API_HASH", "")
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
+WORKERS = int(os.environ.get("WORKERS", "200"))
+PLUGINS = dict(os.environ.get("PLUGINS", {"root": "bot/plugins"}))
+SLEEP_THRESHOLD = int(os.environ.get("SLEEP_THRESHOLD", "10"))
 DB_URI = os.environ.get("DB_URI", "")
 SESSION_STRING = os.environ.get("SESSION_STRING", "")
-OWNER_ID = int(os.environ.get("OWNER_ID", "1790509785"))
-SESSION = os.environ.get("SESSION", "ADV-Auto-Filter-Bot-V2")
-SLEEP_THRESHOLD = int(os.environ.get("SLEEP_THRESHOLD"))
 VERIFY = {}
 
 logging.basicConfig(

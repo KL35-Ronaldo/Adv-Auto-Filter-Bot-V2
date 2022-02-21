@@ -1,19 +1,13 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# (c) @AlbertEinsteinTG
-
 from pyrogram import Client, __version__
-
-from . import API_HASH, APP_ID, LOGGER, \
-    USER_SESSION
+from . import API_HASH, API_ID, LOGGER, SESSION_STRING
 
 
 class User(Client):
     def __init__(self):
         super().__init__(
-            USER_SESSION,
+            session_name=SESSION_STRING,
+            api_id=API_ID,
             api_hash=API_HASH,
-            api_id=APP_ID,
             workers=4
         )
         self.LOGGER = LOGGER
@@ -25,4 +19,4 @@ class User(Client):
 
     async def stop(self, *args):
         await super().stop()
-        self.LOGGER(__name__).info("Bot stopped. Bye.")
+        self.LOGGER(__name__).info("Bot Stopped. Bye.")
