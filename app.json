@@ -1,46 +1,14 @@
 {
     "name": "Auto Filter Bot V2",
     "description": "A Filter Bot Which Doesnt Need Manuall Filter Adding",
-    "logo": "https://telegra.ph/file/667e15c821117633d07bd.png",
-    "keywords": [
-        "Auto",
-        "Filter",
-        "Mongo DB"
-    ],
-    "website": "https://github.com/CrazyBotsz",
-    "repository": "https://github.com/CrazyBotsz/Adv-Auto-Filter-Bot-V2",
-    "success_url": "https://telegram.dog/CrazyBotsz",
+    "logo": "https://telegra.ph/file/3ed71fa60172e09e96794.jpg",
     "env": {
-        "APP_ID": {
-            "description": "Your APP ID From my.telegram.org or @UseTGXBot",
-            "value": ""
-        },
-        "API_HASH": {
-            "description": "Your API Hash From my.telegram.org or @UseTGXBot",
-            "value": ""
-        },
-        "BOT_TOKEN": {
-            "description": "Your Bot Token From @BotFather",
-            "value": ""
-        },
-        "DB_URI": {
-            "description": "Your Mongo DB URL Obtained From mongodb.com",
-            "value": ""
-        },
-        "USER_SESSION": {
-            "description": "A Pyrogram User Session String. Generated From @PyrogramStringBot",
-            "value": ""
-        }
+        "APP_ID": {"description": "From : https://my.telegram.org/"},
+        "API_HASH": {"description": "From : https://my.telegram.org/"},
+        "BOT_TOKEN": {"description": "From : https://t.me/BotFather/"},
+        "DB_URI": {"description": "From : https://cloud.mongodb.com/"},
+        "USER_SESSION": {"description": "From : https://t.me/PyrogramStringBot"}
     },
-    "buildpacks": [
-        {
-            "url": "heroku/python"
-        }
-    ],
-    "formation": {
-        "worker": {
-            "quantity": 1,
-            "size": "free"
-        }
-    }
+    "buildpacks": [{"url": "heroku/python"}],
+    "formation": {"worker": {"quantity": 1, "size": "free"}}
 }
