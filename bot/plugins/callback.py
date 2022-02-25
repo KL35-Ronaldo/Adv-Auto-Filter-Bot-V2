@@ -1,122 +1,85 @@
 import re
 import time
 import asyncio
-
+from bot.database import Database
 from pyrogram import Client, filters
-from pyrogram.errors import FloodWait, UserNotParticipant
+from pyrogram.errors import FloodWait
+from bot.plugins.settings import remove_emoji
+from bot import start_uptime, Translation, VERIFY
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
-
-from bot import start_uptime, Translation, VERIFY # pylint: disable=import-error
-from bot.plugins.auto_filter import ( # pylint: disable=import-error
-    FIND, 
-    INVITE_LINK, 
-    ACTIVE_CHATS,
-    recacher,
-    gen_invite_links
-    )
-from bot.plugins.settings import( # pylint: disable=import-error
-    remove_emoji
-)
-from bot.database import Database # pylint: disable=import-error
+from bot.plugins.auto_filter import FIND, INVITE_LINK, ACTIVE_CHATS, recacher, gen_invite_links
 
 db = Database()
 
-
-@Client.on_callback_query(filters.regex(r"navigate\((.+)\)"), group=2)
+@Client.on_callback_query(filters.regex(r"navigate\((.+)\)"))
 async def cb_navg(bot, update: CallbackQuery):
-    """
-    A Callback Funtion For The Next Button Appearing In Results
-    """
     global VERIFY
     query_data = update.data
     chat_id = update.message.chat.id
     user_id = update.from_user.id
-    
     index_val, btn, query = re.findall(r"navigate\((.+)\)", query_data)[0].split("|", 2)
     try:
         ruser_id = update.message.reply_to_message.from_user.id
     except Exception as e:
         print(e)
         ruser_id = None
-    
     admin_list = VERIFY.get(str(chat_id))
-    if admin_list == None: # Make Admin's ID List
-        
+    if admin_list == None:
         admin_list = []
-        
         async for x in bot.iter_chat_members(chat_id=chat_id, filter="administrators"):
             admin_id = x.user.id 
             admin_list.append(admin_id)
-            
-        admin_list.append(None) # Just For Anonymous Admin....
+        admin_list.append(None)
         VERIFY[str(chat_id)] = admin_list
-    
-    if not ((user_id == ruser_id) or (user_id in admin_list)): # Checks if user is same as requested user or is admin
+    if not ((user_id == ruser_id) or (user_id in admin_list)):
         await update.answer("Nice Try ;)",show_alert=True)
         return
-
-
     if btn == "next":
         index_val = int(index_val) + 1
     elif btn == "back":
         index_val = int(index_val) - 1
-    
     achats = ACTIVE_CHATS[str(chat_id)]
     configs = await db.find_chat(chat_id)
     pm_file_chat = configs["configs"]["pm_fchat"]
     show_invite = configs["configs"]["show_invite_link"]
     show_invite = (False if pm_file_chat == True else show_invite)
-    
     results = FIND.get(query).get("results")
     leng = FIND.get(query).get("total_len")
     max_pages = FIND.get(query).get("max_pages")
-    
     try:
         temp_results = results[index_val].copy()
     except IndexError:
-        return # Quick Fix🏃🏃
+        return
     except Exception as e:
         print(e)
         return
-
-    if ((index_val + 1 )== max_pages) or ((index_val + 1) == len(results)): # Max Pages
+    if ((index_val + 1 )== max_pages) or ((index_val + 1) == len(results)):
         temp_results.append([
-            InlineKeyboardButton("⏪ Back", callback_data=f"navigate({index_val}|back|{query})")
+            InlineKeyboardButton("<<< Back", callback_data=f"navigate({index_val}|back|{query})")
         ])
-
     elif int(index_val) == 0:
         pass
-
     else:
         temp_results.append([
-            InlineKeyboardButton("⏪ Back", callback_data=f"navigate({index_val}|back|{query})"),
-            InlineKeyboardButton("Next ⏩", callback_data=f"navigate({index_val}|next|{query})")
+            InlineKeyboardButton("<<< Back", callback_data=f"navigate({index_val}|back|{query})"),
+            InlineKeyboardButton("Next >>>", callback_data=f"navigate({index_val}|next|{query})")
         ])
-
     if not int(index_val) == 0:    
         temp_results.append([
-            InlineKeyboardButton(f"🔰 Page {index_val + 1}/{len(results) if len(results) < max_pages else max_pages} 🔰", callback_data="ignore")
+            InlineKeyboardButton(f"📃 Pages {index_val + 1}/{len(results) if len(results) < max_pages else max_pages}", callback_data="ignore")
         ])
-    
     if show_invite and int(index_val) !=0 :
-        
         ibuttons = []
         achatId = []
         await gen_invite_links(configs, chat_id, bot, update)
-        
         for x in achats["chats"] if isinstance(achats, dict) else achats:
             achatId.append(int(x["chat_id"])) if isinstance(x, dict) else achatId.append(x)
-        
         for y in INVITE_LINK.get(str(chat_id)):
-            
             chat_id = int(y["chat_id"])
-            
             if chat_id not in achatId:
                 continue
-            
             chat_name = y["chat_name"]
             invite_link = y["invite_link"]
-            
             if ((len(ibuttons)%2) == 0):
                 ibuttons.append(
                     [
@@ -126,7 +89,6 @@ async def cb_navg(bot, update: CallbackQuery):
                             )
                     ]
                 )
-
             else:
                 ibuttons[-1].append(
                     InlineKeyboardButton
@@ -134,369 +96,241 @@ async def cb_navg(bot, update: CallbackQuery):
                             f"⚜ {chat_name} ⚜", url=invite_link
                         )
                 )
-            
         for x in ibuttons:
             temp_results.insert(0, x)
         ibuttons = None
         achatId = None
-    
     reply_markup = InlineKeyboardMarkup(temp_results)
-    
-    text=f"<i>Found</i> <code>{leng}</code> <i>Results For Your Query:</i> <code>{query}</code>"
-        
+    text=f"""__**Here Is What I Found In My DataBase For Your Query : #{query.replace(" ", "_").title()}**__\n\n • __Total **{(leng)}** Results Found__"""
     try:
         await update.message.edit(
-                text,
-                reply_markup=reply_markup,
-                parse_mode="html"
+            text,
+            reply_markup=reply_markup,
+            parse_mode="md"
         )
-        
-    except FloodWait as f: # Flood Wait Caused By Spamming Next/Back Buttons
+    except FloodWait as f:
         await asyncio.sleep(f.x)
         await update.message.edit(
-                text,
-                reply_markup=reply_markup,
-                parse_mode="html"
+            text,
+            reply_markup=reply_markup,
+            parse_mode="md"
         )
 
-
-
-@Client.on_callback_query(filters.regex(r"settings"), group=2)
+@Client.on_callback_query(filters.regex(r"settings"), group=1)
 async def cb_settings(bot, update: CallbackQuery):
-    """
-    A Callback Funtion For Back Button in /settings Command
-    """
     global VERIFY
     chat_id = update.message.chat.id
     user_id = update.from_user.id
-    
-    if user_id not in VERIFY.get(str(chat_id)): # Check If User Is Admin
+    if user_id not in VERIFY.get(str(chat_id)):
         return
-
     bot_status = await bot.get_me()
     bot_fname= bot_status.first_name
-    
     text =f"<i>{bot_fname}'s</i> Settings Pannel.....\n"
     text+=f"\n<i>You Can Use This Menu To Change Connectivity And Know Status Of Your Every Connected Channel, Change Filter Types, Configure Filter Results And To Know Status Of Your Group...</i>"
-    
     buttons = [
         [
-            InlineKeyboardButton
-                (
-                    "Channels", callback_data=f"channel_list({chat_id})"
-                ), 
-            
-            InlineKeyboardButton
-                (
-                    "Filter Types", callback_data=f"types({chat_id})"
-                )
+            InlineKeyboardButton("Channels", callback_data=f"channel_list({chat_id})"),
+            InlineKeyboardButton("Filter Types", callback_data=f"types({chat_id})")
         ],
         [
-            InlineKeyboardButton
-                (
-                    "Configure 🛠", callback_data=f"config({chat_id})"
-                )
+            InlineKeyboardButton("Configure 🛠", callback_data=f"config({chat_id})")
         ], 
         [
-            InlineKeyboardButton
-                (
-                    "Status", callback_data=f"status({chat_id})"
-                ),
-            
-            InlineKeyboardButton
-                (
-                    "About", callback_data=f"about({chat_id})"
-                )
+            InlineKeyboardButton("Status", callback_data=f"status({chat_id})"),
+            InlineKeyboardButton("About", callback_data=f"about({chat_id})")
         ],
         [
-            InlineKeyboardButton
-                (
-                    "Close 🔐", callback_data="close"
-                )
+            InlineKeyboardButton("Close 🔐", callback_data="close")
         ]
     ]
-
     reply_markup = InlineKeyboardMarkup(buttons)
-
     await update.message.edit_text(
         text, 
         reply_markup=reply_markup, 
         parse_mode="html"
-        )
-
-
+    )
 
 @Client.on_callback_query(filters.regex(r"warn\((.+)\)"), group=2)
 async def cb_warn(bot, update: CallbackQuery):
-    """
-    A Callback Funtion For Acknowledging User's About What Are They Upto
-    """
     global VERIFY
     query_data = update.data
     chat_id = update.message.chat.id
     chat_name = remove_emoji(update.message.chat.title)
     chat_name = chat_name.encode('ascii', 'ignore').decode('ascii')[:35]
     user_id = update.from_user.id
-    
     if user_id not in VERIFY.get(str(chat_id)):
         return
-    
     channel_id, channel_name, action = re.findall(r"warn\((.+)\)", query_data)[0].split("|", 2)
-    
     if action == "connect":
         text=f"<i>Are You Sure You Want To Enable Connection With</i> <code>{channel_name}</code><i>..???</i>\n"
         text+=f"\n<i>This Will Show File Links From</i> <code>{channel_name}</code> <i>While Showing Results</i>..."
-    
     elif action == "disconnect":
         text=f"<i>Are You Sure You Want To Disable</i> <code>{channel_name}</code> <i>Connection With The Group???....</i>\n"
         text+=f"\n<i>The DB Files Will Still Be There And You Can Connect Back To This Channel Anytime From Settings Menu Without Adding Files To DB Again...</i>\n"
         text+=f"\n<i>This Disabling Just Hide Results From The Filter Results...</i>"
-    
     elif action == "c_delete":
         text=f"<i>Are You Sure You Want To Disconnect</i> <code>{channel_name}</code> <i>From This Group??</i>\n"
         text+=f"\n<i><b>This Will Delete Channel And All Its Files From DB Too....!!</b></i>\n"
         text+=f"\nYou Need To Add Channel Again If You Need To Shows It Result..."
-        
-    
     elif action=="f_delete":
         text=f"<i>Are You Sure That You Want To Clear All Filter From This Chat</i> <code>{channel_name}</code><i>???</i>\n"
         text+=f"\n<i>This Will Erase All Files From DB..</i>"
         
     buttons = [
         [
-            InlineKeyboardButton
-                (
-                    "Yes", callback_data=f"{action}({channel_id}|{channel_name})"
-                ), 
-            
-            InlineKeyboardButton
-                (
-                    "No", callback_data="close"
-                )
+            InlineKeyboardButton("Yes", callback_data=f"{action}({channel_id}|{channel_name})"),
+            InlineKeyboardButton("No", callback_data="close")
         ]
     ]
-    
     reply_markup = InlineKeyboardMarkup(buttons)
-    
     await update.message.edit_text(
         text,
         reply_markup=reply_markup,
         parse_mode="html"
     )
 
-
-
-@Client.on_callback_query(filters.regex(r"channel_list\((.+)\)"), group=2)
+@Client.on_callback_query(filters.regex(r"channel_list\((.+)\)"), group=3)
 async def cb_channel_list(bot, update: CallbackQuery):    
-    """
-    A Callback Funtion For Displaying All Channel List And Providing A Menu To Navigate
-    To Every COnnect Chats For Furthur Control
-    """
     global VERIFY
     query_data = update.data
     chat_id = update.message.chat.id
     chat_name = remove_emoji(update.message.chat.title)
     chat_name = chat_name.encode('ascii', 'ignore').decode('ascii')[:35]
     user_id = update.from_user.id
-    
     if user_id not in VERIFY.get(str(chat_id)):
         return
-        
     chat_id =  re.findall(r"channel_list\((.+)\)", query_data)[0]
-    
     text = "<i>Semms Like You Dont Have Any Channel Connected...</i>\n\n<i>Connect To Any Chat To Continue With This Settings...</i>"
-    
     db_list = await db.find_chat(int(chat_id))
-    
     channel_id_list = []
     channel_name_list = []
-    
     if db_list:
         for x in db_list["chat_ids"]:
             channel_id = x["chat_id"]
             channel_name = x["chat_name"]
-            
             try:
                 if (channel_id == None or channel_name == None):
                     continue
             except:
                 break
-            
             channel_name = remove_emoji(channel_name).encode('ascii', 'ignore').decode('ascii')[:35]
             channel_id_list.append(channel_id)
             channel_name_list.append(channel_name)
-        
     buttons = []
-
     buttons.append(
         [
-            InlineKeyboardButton
-                (
-                    "🔙 Back", callback_data="settings"
-                ),
-            
-            InlineKeyboardButton
-                (
-                    "Close 🔐", callback_data="close"
-                )
+            InlineKeyboardButton("🔙 Back", callback_data="settings"),
+            InlineKeyboardButton("Close 🔐", callback_data="close")
         ]
-    ) 
-
+    )
     if channel_name_list:
-        
         text=f"<i>List Of Connected Channels With <code>{chat_name}</code> With There Settings..</i>\n"
-    
         for x in range(1, (len(channel_name_list)+1)):
             text+=f"\n<code>{x}. {channel_name_list[x-1]}</code>\n"
-    
         text += "\nChoose Appropriate Buttons To Navigate Through Respective Channels"
-    
-        
         btn_key = [
             "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟", 
             "1️⃣1️⃣", "1️⃣2️⃣", "1️⃣3️⃣", "1️⃣4️⃣", "1️⃣5️⃣", "1️⃣6️⃣", "1️⃣7️⃣", 
-            "1️⃣8️⃣", "1️⃣9️⃣", "2️⃣0️⃣" # Just In Case 😂🤣
+            "1️⃣8️⃣", "1️⃣9️⃣", "2️⃣0️⃣"
         ]
-    
-        for i in range(1, (len(channel_name_list) + 1)): # Append The Index Number of Channel In Just A Single Line
+        for i in range(1, (len(channel_name_list) + 1)):
             if i == 1:
-                buttons.insert(0,
+                buttons.insert(
+                    0,
                     [
-                    InlineKeyboardButton
-                        (
+                        InlineKeyboardButton(
                             btn_key[i-1], callback_data=f"info({channel_id_list[i-1]}|{channel_name_list[i-1]})"
                         )
                     ]
                 )
-        
             else:
                 buttons[0].append(
-                    InlineKeyboardButton
-                        (
-                            btn_key[i-1], callback_data=f"info({channel_id_list[i-1]}|{channel_name_list[i-1]})"
-                        )
+                    InlineKeyboardButton(
+                        btn_key[i-1], callback_data=f"info({channel_id_list[i-1]}|{channel_name_list[i-1]})"
+                    )
                 )
-    
     reply_markup=InlineKeyboardMarkup(buttons)
-    
     await update.message.edit_text(
-            text = text,
-            reply_markup=reply_markup,
-            parse_mode="html"
-        )
+        text = text,
+        reply_markup=reply_markup,
+        parse_mode="html"
+    )
 
-
-
-@Client.on_callback_query(filters.regex(r"info\((.+)\)"), group=2)
+@Client.on_callback_query(filters.regex(r"info\((.+)\)"), group=4)
 async def cb_info(bot, update: CallbackQuery):
-    """
-    A Callback Funtion For Displaying Details Of The Connected Chat And Provide
-    Ability To Connect / Disconnect / Delete / Delete Filters of That Specific Chat
-    """
     global VERIFY
     query_data = update.data
     chat_id = update.message.chat.id
     user_id = update.from_user.id
-    
     if user_id not in VERIFY.get(str(chat_id)):
         return
-
     channel_id, channel_name = re.findall(r"info\((.+)\)", query_data)[0].split("|", 1)
-    
     f_count = await db.cf_count(chat_id, int(channel_id)) 
     active_chats = await db.find_active(chat_id)
-
-    if active_chats: # Checks for active chats connected to a chat
+    if active_chats:
         dicts = active_chats["chats"]
         db_cids = [ int(x["chat_id"]) for x in dicts ]
-        
         if int(channel_id) in db_cids:
             active_chats = True
             status = "Connected"
-            
         else:
             active_chats = False
             status = "Disconnected"
-            
     else:
         active_chats = False
         status = "Disconnected"
-
     text=f"<i>Info About <b>{channel_name}</b></i>\n"
     text+=f"\n<i>Channel Name:</i> <code>{channel_name}</code>\n"
     text+=f"\n<i>Channel ID:</i> <code>{channel_id}</code>\n"
     text+=f"\n<i>Channel Files:</i> <code>{f_count}</code>\n"
     text+=f"\n<i>Current Status:</i> <code>{status}</code>\n"
-
-
     if active_chats:
         buttons = [
-                    [
-                        InlineKeyboardButton
-                            (
-                                "🚨 Disconnect 🚨", callback_data=f"warn({channel_id}|{channel_name}|disconnect)"
-                            ),
-                        
-                        InlineKeyboardButton
-                            (
-                                "Delete ❌", callback_data=f"warn({channel_id}|{channel_name}|c_delete)"
-                            )
-                    ]
+            [
+                InlineKeyboardButton(
+                    "🚨 Disconnect 🚨", callback_data=f"warn({channel_id}|{channel_name}|disconnect)"
+                ),
+                InlineKeyboardButton(
+                    "Delete ❌", callback_data=f"warn({channel_id}|{channel_name}|c_delete)"
+                )
+            ]
         ]
-
     else:
-        buttons = [ 
-                    [
-                        InlineKeyboardButton
-                            (
-                                "💠 Connect 💠", callback_data=f"warn({channel_id}|{channel_name}|connect)"
-                            ),
-                        
-                        InlineKeyboardButton
-                            (
-                                "Delete ❌", callback_data=f"warn({channel_id}|{channel_name}|c_delete)"
-                            )
-                    ]
+        buttons = [
+            [
+                InlineKeyboardButton(
+                    "💠 Connect 💠", callback_data=f"warn({channel_id}|{channel_name}|connect)"
+                ),
+                InlineKeyboardButton(
+                    "Delete ❌", callback_data=f"warn({channel_id}|{channel_name}|c_delete)"
+                )
+            ]
         ]
-
     buttons.append(
-            [
-                InlineKeyboardButton
-                    (
-                        "Delete Filters ⚠", callback_data=f"warn({channel_id}|{channel_name}|f_delete)"
-                    )
-            ]
+        [
+            InlineKeyboardButton(
+                "Delete Filters ⚠", callback_data=f"warn({channel_id}|{channel_name}|f_delete)"
+            )
+        ]
     )
-    
     buttons.append(
-            [
-                InlineKeyboardButton
-                    (
-                        "🔙 Back", callback_data=f"channel_list({chat_id})"
-                    )
-            ]
+        [
+            InlineKeyboardButton(
+                "🔙 Back", callback_data=f"channel_list({chat_id})"
+            )
+        ]
     )
-
     reply_markup = InlineKeyboardMarkup(buttons)
-        
     await update.message.edit_text(
-            text, reply_markup=reply_markup, parse_mode="html"
-        )
+        text, reply_markup=reply_markup, parse_mode="html"
+    )
 
-
-
-@Client.on_callback_query(filters.regex(r"^connect\((.+)\)"), group=2)
+@Client.on_callback_query(filters.regex(r"^connect\((.+)\)"), group=5)
 async def cb_connect(bot, update: CallbackQuery):
-    """
-    A Callback Funtion Helping The user To Make A Chat Active Chat Which Will
-    Make The Bot To Fetch Results From This Channel Too
-    """
     global VERIFY
     query_data = update.data
     chat_id = update.message.chat.id
     user_id = update.from_user.id
-    
-
     if user_id not in VERIFY.get(str(chat_id)):
         return
 
